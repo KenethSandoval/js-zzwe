@@ -6,16 +6,17 @@ function fillCircle(context, x, y, radius, color="green") {
 }
 
 (() => {
-  const canvas = document.getElementById("game");
-  const { width, height } = canvas;
+  const canvas = document.getElementById("game"); 
   const radius = 69;
   const context = canvas.getContext("2d");
+  const speed = 100;
+
 
   let start;
-  let x = width / 2;
-  let y = height / 2;
-  let dx = 100;
-  let dy = 100;
+  let x = radius + 10;
+  let y = radius + 10;
+  let dx = speed;
+  let dy = speed;
   
   function step (timestamp) {
     if(start === undefined) {
@@ -24,14 +25,18 @@ function fillCircle(context, x, y, radius, color="green") {
 
     const dt = (timestamp - start) * 0.001;
     start = timestamp;
-  
+ 
+    const { innerWidth, innerHeight } = window;
+    canvas.width = innerWidth;
+    canvas.height = innerHeight;
+ 
+    if(x + radius >= innerWidth  || x - radius <= 0) dx = -dx;
+    if(y + radius >= innerHeight || y - radius <= 0) dy = -dy;
+    
     x += dx * dt;
     y += dy * dt;
 
-    if(x + radius >= width  || x - radius <= 0) dx = -dx;
-    if(y + radius >= height || y - radius <= 0) dy = -dy;
-   
-    context.clearRect(0, 0, width, height);
+    context.clearRect(0, 0, innerWidth, innerHeight);
     fillCircle(context, x, y, radius, "red");
 
     window.requestAnimationFrame(step);
