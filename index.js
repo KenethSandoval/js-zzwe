@@ -15,10 +15,22 @@ class V2 {
   scale(s) {
     return new V2(this.x * s, this.y * s);
   }
+
+  length() {
+    return Math.sqrt(this.x * this.x + this.y * this.y);
+  }
+
+  normalize() {
+    const n = this.length();
+    return new V2(this.x / n, this.y / n);
+  }
 }
 
 const radius = 69;
 const speed = 1000;
+const BULLET_SPEED = 2000;
+const BULLET_RADIUS = 40;
+
 const directionMap = {
     's': new V2(0, 1.0),
     'w': new V2(0, -1.0),
@@ -57,21 +69,37 @@ class Popup {
 
   fadeIn() {
     this.dalpha = 1.0;
-    this.alpha = 0.0;
   }
 
   fadeOut() {
     this.dalpha = -1.0;
-    this.alpha = 1.0;
   }
+}
+
+class Bullet {
+  constructor(pos, vel) {
+    this.pos = pos;
+    this.vel = vel;
+  }
+
+  update(dt) {
+    this.pos = this.pos.add(this.vel.scale(dt));
+  }
+
+  render(context) {
+    fillCircle(context, this.pos, BULLET_RADIUS, "red"); 
+  } 
 }
 
 class Game {
   constructor() {
     this.pos = new V2(radius + 10, radius + 10); 
+    this.mousePos = new V2(0, 0);
     this.pressedKey = new Set(); 
     this.popup = new Popup("WASD to move around");
     this.popup.fadeIn()
+    this.played_move_for_the_first = false;
+    this.bullets = new Set();
   }
 
   update(dt) {
@@ -81,9 +109,18 @@ class Game {
         vel = vel.add(directionMap[key].scale(speed));
       }
     } 
+
+    if(!this.played_move_for_the_first && vel.length() > 0.0) {
+      this.played_move_for_the_first = true;
+      this.popup.fadeOut();
+    } 
  
     this.pos = this.pos.add(vel.scale(dt)); 
     this.popup.update(dt)
+
+    for (let bullet of this.bullets){
+      bullet.update(dt);
+    }
   }
 
   render(context) {
@@ -93,7 +130,11 @@ class Game {
     context.clearRect(0, 0, width, height);
     fillCircle(context, this.pos, radius, "red");
 
-    this.popup.render(context)
+    this.popup.render(context);
+ 
+    for (let bullet of this.bullets){
+      bullet.render(context);
+    }
   }
 
   keyDown(event) {
@@ -102,6 +143,20 @@ class Game {
 
   keyUp(event) {
     this.pressedKey.delete(event.key);
+  }
+
+  mouseMove(event) {
+  }
+
+  
+  mouseDown(event) {
+    const mousePos = new V2(event.screenX, event.screenY);
+    const bulletVel = mousePos
+          .sub(this.pos)
+          .normalize()
+          .scale(BULLET_SPEED);
+
+    this.bullets.add(new Bullet(this.pos, bulletVel));
   }
 }
 
@@ -118,9 +173,8 @@ function fillCircle(context, center, radius, color="green") {
   const context = canvas.getContext("2d");
 
   const game = new Game();
-  let start;  
-  let move_for_the_first_time = false;
 
+  let start;  
   function step (timestamp) {
     if(start === undefined) {
       start = timestamp;
@@ -148,5 +202,13 @@ function fillCircle(context, center, radius, color="green") {
 
   document.addEventListener('keyup', event => { 
     game.keyUp(event);
+  });
+
+  document.addEventListener('mousemove', event => {
+    game.mouseMove(event);
+  });
+
+  document.addEventListener('mousedown', event => {
+    game.mouseDown(event);
   });
 })();
