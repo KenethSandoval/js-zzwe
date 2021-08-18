@@ -32,7 +32,7 @@ const TUTORIAL_POPUP_SPEED = 1.5;
 const BULLET_SPEED = 2000;
 const BULLET_RADIUS = 40;
 const BULLET_LIFETIME = 5.0;
-const ENEMY_SPEED = PLAYER_SPEED / 2;
+const ENEMY_SPEED = PLAYER_SPEED / 3;
 const ENEMY_COLOR = "#9e95c7";
 const ENEMY_RADIUS = PLAYER_RADIUS / 2;
 
@@ -100,7 +100,7 @@ class Enemy {
   
   update(dt, followPos) {
     let vel = followPos.sub(this.pos).normalize().scale(ENEMY_SPEED * dt); 
-    this.pos = this.pos.add(this.vel);
+    this.pos = this.pos.add(vel);
   }
   
   render(context) {
@@ -179,6 +179,9 @@ class Game {
     this.tutorial = new Tutorial();
     this.played_move_for_the_first = false;
     this.bullets = [];
+    this.enemies = [];
+
+    this.enemies.push(new Enemy(new V2(800, 600)));
   }
 
   update(dt) {
@@ -202,6 +205,11 @@ class Game {
       bullet.update(dt);
     }
     
+    
+   for (let enemy of this.enemies){
+      enemy.update(dt, this.pos);
+    } 
+   
     this.bullets = this.bullets.filter(bullet => bullet.lifetime > 0.0);
   }
 
@@ -217,6 +225,10 @@ class Game {
     for (let bullet of this.bullets){
       bullet.render(context);
     }
+   
+    for (let enemy of this.enemies){
+      enemy.render(context);
+    } 
   }
 
   keyDown(event) {
@@ -226,7 +238,11 @@ class Game {
   keyUp(event) {
     this.pressedKey.delete(event.key);
   }
-  
+ 
+  mouseMove(event) {
+
+  }
+ 
   mouseDown(event) {
     this.tutorial.playerShot();
     const mousePos = new V2(event.offsetX, event.offsetY);
