@@ -26,12 +26,15 @@ class V2 {
   }
 }
 
-const radius = 69;
-const speed = 1000;
+const PLAYER_RADIUS = 69;
+const PLAYER_SPEED = 1000;
 const TUTORIAL_POPUP_SPEED = 1.5;
 const BULLET_SPEED = 2000;
 const BULLET_RADIUS = 40;
 const BULLET_LIFETIME = 5.0;
+const ENEMY_SPEED = PLAYER_SPEED / 2;
+const ENEMY_COLOR = "#9e95c7";
+const ENEMY_RADIUS = PLAYER_RADIUS / 2;
 
 const directionMap = {
     's': new V2(0, 1.0),
@@ -86,6 +89,22 @@ class Popup {
 
   fadeOut() {
     this.dalpha = -TUTORIAL_POPUP_SPEED;
+  }
+}
+
+class Enemy {
+  constructor(pos) {
+    this.pos = pos;
+    this.ded = false;
+  } 
+  
+  update(dt, followPos) {
+    let vel = followPos.sub(this.pos).normalize().scale(ENEMY_SPEED * dt); 
+    this.pos = this.pos.add(this.vel);
+  }
+  
+  render(context) {
+    fillCircle(context, this.pos, ENEMY_RADIUS, ENEMY_COLOR); 
   }
 }
 
@@ -154,7 +173,7 @@ class Tutorial {
 
 class Game {
   constructor() {
-    this.pos = new V2(radius + 10, radius + 10); 
+    this.pos = new V2(PLAYER_RADIUS + 10, PLAYER_RADIUS + 10); 
     this.mousePos = new V2(0, 0);
     this.pressedKey = new Set(); 
     this.tutorial = new Tutorial();
@@ -167,7 +186,7 @@ class Game {
     let moved = false;
     for (let key of this.pressedKey) {
       if(key in directionMap) {
-        vel = vel.add(directionMap[key].scale(speed));
+        vel = vel.add(directionMap[key].scale(PLAYER_SPEED));
         moved = true;
       }
     } 
@@ -191,7 +210,7 @@ class Game {
     const height = context.canvas.height;
 
     context.clearRect(0, 0, width, height);
-    fillCircle(context, this.pos, radius, "red");
+    fillCircle(context, this.pos, PLAYER_RADIUS, "red");
 
     this.tutorial.render(context);
  
@@ -207,10 +226,6 @@ class Game {
   keyUp(event) {
     this.pressedKey.delete(event.key);
   }
-
-  mouseMove(event) {
-  }
-
   
   mouseDown(event) {
     this.tutorial.playerShot();
