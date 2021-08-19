@@ -16,13 +16,17 @@ class V2 {
     return new V2(this.x * s, this.y * s);
   }
 
-  length() {
+  len() {
     return Math.sqrt(this.x * this.x + this.y * this.y);
   }
 
   normalize() {
-    const n = this.length();
+    const n = this.len();
     return new V2(this.x / n, this.y / n);
+  }
+
+  dist(that) {
+    return this.sub(that).len();
   }
 }
 
@@ -34,7 +38,7 @@ const BULLET_RADIUS = 40;
 const BULLET_LIFETIME = 5.0;
 const ENEMY_SPEED = PLAYER_SPEED / 3;
 const ENEMY_COLOR = "#9e95c7";
-const ENEMY_RADIUS = PLAYER_RADIUS / 2;
+const ENEMY_RADIUS = PLAYER_RADIUS;
 
 const directionMap = {
     's': new V2(0, 1.0),
@@ -201,16 +205,28 @@ class Game {
     this.pos = this.pos.add(vel.scale(dt)); 
     this.tutorial.update(dt)
 
+    for (let enemy of this.enemies){
+      for (let bullet of this.bullets){
+        if(enemy.pos.dist(bullet.pos) <= BULLET_RADIUS + ENEMY_RADIUS) {
+          enemy.ded = true;
+          enemy.lifetime = 0.0; 
+        }
+      }
+    }
+
+
     for (let bullet of this.bullets){
       bullet.update(dt);
     }
     
-    
-   for (let enemy of this.enemies){
+ 
+    this.bullets = this.bullets.filter(bullet => bullet.lifetime > 0.0);
+
+    for (let enemy of this.enemies){
       enemy.update(dt, this.pos);
     } 
-   
-    this.bullets = this.bullets.filter(bullet => bullet.lifetime > 0.0);
+    
+    this.enemies = this.enemies.filter(enemy => !enemy.ded); 
   }
 
   render(context) {
@@ -219,8 +235,6 @@ class Game {
 
     context.clearRect(0, 0, width, height);
     fillCircle(context, this.pos, PLAYER_RADIUS, "red");
-
-    this.tutorial.render(context);
  
     for (let bullet of this.bullets){
       bullet.render(context);
@@ -228,7 +242,9 @@ class Game {
    
     for (let enemy of this.enemies){
       enemy.render(context);
-    } 
+    }
+ 
+    this.tutorial.render(context);
   }
 
   keyDown(event) {
