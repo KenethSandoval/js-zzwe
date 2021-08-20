@@ -30,15 +30,26 @@ class V2 {
   }
 }
 
+function polarV2(mag, dir) {
+  return new V2(Math.cos(dir) * mag, Math.sin(dir) * mag);
+} 
+
 const PLAYER_RADIUS = 69;
 const PLAYER_SPEED = 1000;
-const TUTORIAL_POPUP_SPEED = 1.5;
+const TUTORIAL_POPUP_SPEED = 1.7;
 const BULLET_SPEED = 2000;
-const BULLET_RADIUS = 40;
+const BULLET_RADIUS = 42;
 const BULLET_LIFETIME = 5.0;
 const ENEMY_SPEED = PLAYER_SPEED / 3;
+const ENEMY_SPAWN_COOLDOWN = 1.0;
+const ENEMY_SPAWN_DISTANCE = 1500.0;
 const ENEMY_COLOR = "#9e95c7";
 const ENEMY_RADIUS = PLAYER_RADIUS;
+const PARTICLE_COUNT = 50;
+const PARTICLE_COLOR = ENEMY_COLOR;
+const PARTICLE_MAG = BULLET_SPEED;
+const PARTICLE_LIFETIME  = 1.0;
+const PARTICLE_RADIUS = 10.0;
 
 const directionMap = {
     's': new V2(0, 1.0),
@@ -46,6 +57,53 @@ const directionMap = {
     'a': new V2(-1.0, 0),
     'd': new V2(1.0, 0)
 };
+
+class Particle {
+  constructor(pos, vel, lifetime, radius) {
+    this.pos = pos;
+    this.vel = vel;
+    this.lifetime = lifetime;
+    this.radius = radius
+  }
+
+  render(context) {
+    const a = this.lifetime / PARTICLE_LIFETIME;
+    console.log(a);
+    fillCircle(context, this.pos, this.radius, `rgba(158, 149, 199, ${a})`);
+  }
+
+  update(dt) {
+    this.pos = this.pos.add(this.vel.scale(dt));
+    this.lifetime -= dt;
+  }
+}
+
+function particleBurs(particle, center) {
+  const N = Math.random() * PARTICLE_COUNT;
+  for(let i = 0; i < N; ++i) {
+    particle.push(new Particle(
+      center, 
+      polarV2(Math.random() * PARTICLE_MAG, Math.random() * 2 * Math.PI), 
+      Math.random() * PARTICLE_LIFETIME, 
+      Math.random() * PARTICLE_RADIUS + 10.0));
+  }
+}
+
+class Enemy {
+  constructor(pos) {
+    this.pos = pos;
+    this.ded = false;
+  } 
+  
+  update(dt, followPos) {
+    let vel = followPos.sub(this.pos).normalize().scale(ENEMY_SPEED * dt); 
+    this.pos = this.pos.add(vel);
+  }
+  
+  render(context) {
+    fillCircle(context, this.pos, ENEMY_RADIUS, ENEMY_COLOR); 
+  }
+}
 
 class Popup {
   constructor(text) {
@@ -93,22 +151,6 @@ class Popup {
 
   fadeOut() {
     this.dalpha = -TUTORIAL_POPUP_SPEED;
-  }
-}
-
-class Enemy {
-  constructor(pos) {
-    this.pos = pos;
-    this.ded = false;
-  } 
-  
-  update(dt, followPos) {
-    let vel = followPos.sub(this.pos).normalize().scale(ENEMY_SPEED * dt); 
-    this.pos = this.pos.add(vel);
-  }
-  
-  render(context) {
-    fillCircle(context, this.pos, ENEMY_RADIUS, ENEMY_COLOR); 
   }
 }
 
@@ -175,6 +217,12 @@ class Tutorial {
   }
 };
 
+function renderEntities(context, entities) {
+  for(let entity of entities) {
+    entity.render(context); 
+  }
+}
+
 class Game {
   constructor() {
     this.pos = new V2(PLAYER_RADIUS + 10, PLAYER_RADIUS + 10); 
@@ -184,8 +232,9 @@ class Game {
     this.played_move_for_the_first = false;
     this.bullets = [];
     this.enemies = [];
-
-    this.enemies.push(new Enemy(new V2(800, 600)));
+    this.particles = [];
+    this.enemySpawnRate = ENEMY_SPAWN_COOLDOWN;
+    this.enemySpawnCooldown = this.enemySpawnRate; 
   }
 
   update(dt) {
@@ -207,26 +256,47 @@ class Game {
 
     for (let enemy of this.enemies){
       for (let bullet of this.bullets){
-        if(enemy.pos.dist(bullet.pos) <= BULLET_RADIUS + ENEMY_RADIUS) {
+        if(!enemy.ded && enemy.pos.dist(bullet.pos) <= BULLET_RADIUS + ENEMY_RADIUS) {
           enemy.ded = true;
-          enemy.lifetime = 0.0; 
+          bullet.lifetime = 0.0;
+          particleBurs(this.particles, enemy.pos);
         }
       }
     }
 
-
     for (let bullet of this.bullets){
       bullet.update(dt);
     }
-    
- 
+     
     this.bullets = this.bullets.filter(bullet => bullet.lifetime > 0.0);
 
+    for (let particle of this.particles){
+      particle.update(dt);
+    }
+     
+    this.particles = this.particles.filter(particle => particle.lifetime > 0.0);
+ 
     for (let enemy of this.enemies){
       enemy.update(dt, this.pos);
     } 
     
     this.enemies = this.enemies.filter(enemy => !enemy.ded); 
+
+    if (this.tutorial.state == TutorialState.Finished) {
+      this.enemySpawnCooldown -= dt;
+      if(this.enemySpawnCooldown <= 0.0) {
+         this.spawnEnemy(); 
+         this.enemySpawnCooldown = this.enemySpawnRate;
+         this.enemySpawnRate = Math.max(0.01, this.enemySpawnRate - 0.01);
+      } 
+    }
+  }
+
+  spawnEnemy() {
+    let dir = Math.random() * 2 * Math.PI;
+    this.enemies.push( 
+      new Enemy(this.pos.add(polarV2(ENEMY_SPAWN_DISTANCE, dir)))
+    );
   }
 
   render(context) {
@@ -236,13 +306,9 @@ class Game {
     context.clearRect(0, 0, width, height);
     fillCircle(context, this.pos, PLAYER_RADIUS, "red");
  
-    for (let bullet of this.bullets){
-      bullet.render(context);
-    }
-   
-    for (let enemy of this.enemies){
-      enemy.render(context);
-    }
+    renderEntities(context, this.bullets);
+    renderEntities(context, this.particles);
+    renderEntities(context, this.enemies);
  
     this.tutorial.render(context);
   }
