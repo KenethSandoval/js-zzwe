@@ -68,7 +68,6 @@ class Particle {
 
   render(context) {
     const a = this.lifetime / PARTICLE_LIFETIME;
-    console.log(a);
     fillCircle(context, this.pos, this.radius, `rgba(158, 149, 199, ${a})`);
   }
 
