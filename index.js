@@ -347,6 +347,7 @@ function fillCircle(context, center, radius, color="green") {
 (() => {
   const canvas = document.getElementById("game"); 
   const context = canvas.getContext("2d");
+  let windowWasResized = true;
 
   const game = new Game();
 
@@ -359,9 +360,11 @@ function fillCircle(context, center, radius, color="green") {
     const dt = (timestamp - start) * 0.001;
     start = timestamp;
  
-    const { innerWidth, innerHeight } = window;
-    canvas.width = innerWidth;
-    canvas.height = innerHeight;
+    if (windowWasResized) {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      windowWasResized = false;
+    }
     
     game.update(dt);
     game.render(context);
@@ -371,7 +374,7 @@ function fillCircle(context, center, radius, color="green") {
   
   window.requestAnimationFrame(step);
 
-  //Eventos
+  //Events
   document.addEventListener('keydown', event => {
     game.keyDown(event);
   });
@@ -386,5 +389,10 @@ function fillCircle(context, center, radius, color="green") {
 
   document.addEventListener('mousedown', event => {
     game.mouseDown(event);
+  });
+  
+  document.addEventListener('resize', event => {
+    console.log("helo");
+    windowWasResized = true;
   });
 })();
