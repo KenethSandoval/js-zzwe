@@ -392,7 +392,6 @@ function fillCircle(context, center, radius, color="green") {
   });
   
   document.addEventListener('resize', event => {
-    console.log("helo");
     windowWasResized = true;
   });
 })();
