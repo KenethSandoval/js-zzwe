@@ -28,10 +28,10 @@ class V2 {
   dist(that) {
     return this.sub(that).len();
   }
-}
 
-function polarV2(mag, dir) {
-  return new V2(Math.cos(dir) * mag, Math.sin(dir) * mag);
+  static polarV2(mag, dir) {
+    return new V2(Math.cos(dir) * mag, Math.sin(dir) * mag);
+  }
 } 
 
 const PLAYER_RADIUS = 69;
@@ -82,7 +82,7 @@ function particleBurs(particle, center) {
   for(let i = 0; i < N; ++i) {
     particle.push(new Particle(
       center, 
-      polarV2(Math.random() * PARTICLE_MAG, Math.random() * 2 * Math.PI), 
+      V2.polarV2(Math.random() * PARTICLE_MAG, Math.random() * 2 * Math.PI), 
       Math.random() * PARTICLE_LIFETIME, 
       Math.random() * PARTICLE_RADIUS + 10.0));
   }
@@ -120,9 +120,7 @@ class Popup {
       this.dalpha = 0.0;
       this.alpha = 0.0;
       
-      if(this.onFadeOut !== undefined) {
-        this.onFadeOut();
-      }
+      this.onFadeOut?.();
  
     } else if(this.dalpha > 0.0 && this.alpha >= 1.0) {
       this.dalpha = 0.0;
@@ -294,7 +292,7 @@ class Game {
   spawnEnemy() {
     let dir = Math.random() * 2 * Math.PI;
     this.enemies.push( 
-      new Enemy(this.pos.add(polarV2(ENEMY_SPAWN_DISTANCE, dir)))
+      new Enemy(this.pos.add(V2.polarV2(ENEMY_SPAWN_DISTANCE, dir)))
     );
   }
 
@@ -343,13 +341,12 @@ function fillCircle(context, center, radius, color="green") {
   context.fill(); 
 }
 
+const game = new Game();
 
 (() => {
   const canvas = document.getElementById("game"); 
   const context = canvas.getContext("2d");
   let windowWasResized = true;
-
-  const game = new Game();
 
   let start;  
   function step (timestamp) {
