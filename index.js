@@ -35,6 +35,7 @@ class V2 {
 } 
 
 const PLAYER_RADIUS = 69;
+const PLAYER_COLOR = "red";
 const PLAYER_SPEED = 1000;
 const TUTORIAL_POPUP_SPEED = 1.7;
 const BULLET_SPEED = 2000;
@@ -221,20 +222,23 @@ function renderEntities(context, entities) {
 }
 
 class Game {
-  constructor() {
-    this.pos = new V2(PLAYER_RADIUS + 10, PLAYER_RADIUS + 10); 
-    this.mousePos = new V2(0, 0);
-    this.pressedKey = new Set(); 
-    this.tutorial = new Tutorial();
-    this.played_move_for_the_first = false;
-    this.bullets = [];
-    this.enemies = [];
-    this.particles = [];
-    this.enemySpawnRate = ENEMY_SPAWN_COOLDOWN;
-    this.enemySpawnCooldown = this.enemySpawnRate; 
-  }
+  pos = new V2(PLAYER_RADIUS + 10, PLAYER_RADIUS + 10); 
+  mousePos = new V2(0, 0);
+  pressedKey = new Set(); 
+  tutorial = new Tutorial();
+  played_move_for_the_first = false;
+  bullets = [];
+  enemies = [];
+  particles = [];
+  enemySpawnRate = ENEMY_SPAWN_COOLDOWN;
+  enemySpawnCooldown = this.enemySpawnRate;
+  paused = false;
 
   update(dt) {
+    if(this.paused) {
+      return;
+    }
+
     let vel = new V2(0,0);
     let moved = false;
     for (let key of this.pressedKey) {
@@ -301,7 +305,7 @@ class Game {
     const height = context.canvas.height;
 
     context.clearRect(0, 0, width, height);
-    fillCircle(context, this.pos, PLAYER_RADIUS, "red");
+    fillCircle(context, this.pos, PLAYER_RADIUS, PLAYER_COLOR);
  
     renderEntities(context, this.bullets);
     renderEntities(context, this.particles);
@@ -310,7 +314,15 @@ class Game {
     this.tutorial.render(context);
   }
 
+  togglePause() {
+    this.paused = !this.paused;
+  }
+
   keyDown(event) {
+    if(event.code === 'Space') {
+      this.togglePause();
+    }
+
     this.pressedKey.add(event.key);
   }
 
