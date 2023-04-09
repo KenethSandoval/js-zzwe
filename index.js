@@ -14,6 +14,11 @@ class Color {
     return new Color(this.r, this.g, this.b, a);
   }
 
+  grayScale() {
+    let x = Math.max(this.r, this.g, this.b);
+    return new Color(x, x, x, this.a);
+  }
+
   static hex(hexcolor) {
     let matches = 
       hexcolor.match(/#([0-9a-z]{2})([0-9a-z]{2})([0-9a-z]{2})/i);
