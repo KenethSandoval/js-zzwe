@@ -1,3 +1,34 @@
+class Color {
+  constructor(r, g, b, a) {
+    this.r = r;
+    this.g = g;
+    this.b = b;
+    this.a = a;
+  }
+
+  toRgba() {
+    return `rgba(${this.r * 255}, ${this.g * 255}, ${this.b * 255}, ${this.a * 255})`;
+  }
+
+  withAlpha(a) {
+    return new Color(this.r, this.g, this.b, a);
+  }
+
+  static hex(hexcolor) {
+    let matches = 
+      hexcolor.match(/#([0-9a-z]{2})([0-9a-z]{2})([0-9a-z]{2})/i);
+    if (matches) {
+      let [,r,g,b] = matches;
+      return new Color(parseInt(r, 16) / 255.0, 
+                parseInt(g, 16) / 255.0, 
+                parseInt(b, 16) / 255.0, 
+                1.0);
+    } else {
+      throw `Could not parse ${hexcolor} as color`;
+    }
+  }
+}
+
 class V2 {
   constructor(x, y) {
     this.x = x;
@@ -35,7 +66,7 @@ class V2 {
 } 
 
 const PLAYER_RADIUS = 69;
-const PLAYER_COLOR = "red";
+const PLAYER_COLOR = Color.hex("#f43841");
 const PLAYER_SPEED = 1000;
 const TUTORIAL_POPUP_SPEED = 1.7;
 const BULLET_SPEED = 2000;
@@ -44,7 +75,7 @@ const BULLET_LIFETIME = 5.0;
 const ENEMY_SPEED = PLAYER_SPEED / 3;
 const ENEMY_SPAWN_COOLDOWN = 1.0;
 const ENEMY_SPAWN_DISTANCE = 1500.0;
-const ENEMY_COLOR = "#9e95c7";
+const ENEMY_COLOR = Color.hex("#9e95c7");
 const ENEMY_RADIUS = PLAYER_RADIUS;
 const PARTICLE_COUNT = 50;
 const PARTICLE_COLOR = ENEMY_COLOR;
@@ -69,7 +100,7 @@ class Particle {
 
   render(context) {
     const a = this.lifetime / PARTICLE_LIFETIME;
-    fillCircle(context, this.pos, this.radius, `rgba(158, 149, 199, ${a})`);
+    fillCircle(context, this.pos, this.radius, PARTICLE_COLOR.withAlpha(a));
   }
 
   update(dt) {
@@ -165,7 +196,7 @@ class Bullet {
   }
 
   render(context) {
-    fillCircle(context, this.pos, BULLET_RADIUS, "red"); 
+    fillCircle(context, this.pos, BULLET_RADIUS, PLAYER_COLOR); 
   } 
 }
 
@@ -349,10 +380,10 @@ class Game {
   }
 }
 
-function fillCircle(context, center, radius, color="green") {
+function fillCircle(context, center, radius, color) {
   context.beginPath();
   context.arc(center.x, center.y, radius, 0, 2 * Math.PI, false);
-  context.fillStyle = color;
+  context.fillStyle = color.toRgba();
   context.fill(); 
 }
 
