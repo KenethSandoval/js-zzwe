@@ -376,6 +376,10 @@ class Game {
   }
  
   mouseDown(event) {
+    if(this.paused) {
+      return;
+    }
+
     this.tutorial.playerShot();
     const mousePos = new V2(event.offsetX, event.offsetY);
     const bulletDir = mousePos
