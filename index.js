@@ -20,14 +20,14 @@ class Color {
   }
 
   static hex(hexcolor) {
-    let matches = 
+    let matches =
       hexcolor.match(/#([0-9a-z]{2})([0-9a-z]{2})([0-9a-z]{2})/i);
     if (matches) {
-      let [,r,g,b] = matches;
-      return new Color(parseInt(r, 16) / 255.0, 
-                parseInt(g, 16) / 255.0, 
-                parseInt(b, 16) / 255.0, 
-                1.0);
+      let [, r, g, b] = matches;
+      return new Color(parseInt(r, 16) / 255.0,
+        parseInt(g, 16) / 255.0,
+        parseInt(b, 16) / 255.0,
+        1.0);
     } else {
       throw `Could not parse ${hexcolor} as color`;
     }
@@ -43,7 +43,7 @@ class V2 {
   add(that) {
     return new V2(this.x + that.x, this.y + that.y);
   }
-  
+
   sub(that) {
     return new V2(this.x - that.x, this.y - that.y);
   }
@@ -68,7 +68,7 @@ class V2 {
   static polarV2(mag, dir) {
     return new V2(Math.cos(dir) * mag, Math.sin(dir) * mag);
   }
-} 
+}
 
 const PLAYER_RADIUS = 69;
 const PLAYER_COLOR = Color.hex("#f43841");
@@ -85,14 +85,15 @@ const ENEMY_RADIUS = PLAYER_RADIUS;
 const PARTICLE_COUNT = 50;
 const PARTICLE_COLOR = ENEMY_COLOR;
 const PARTICLE_MAG = BULLET_SPEED;
-const PARTICLE_LIFETIME  = 1.0;
+const PARTICLE_LIFETIME = 1.0;
 const PARTICLE_RADIUS = 10.0;
+const MESSAGE_COLOR = Color.hex("#ffffff");
 
 const directionMap = {
-    's': new V2(0, 1.0),
-    'w': new V2(0, -1.0),
-    'a': new V2(-1.0, 0),
-    'd': new V2(1.0, 0)
+  's': new V2(0, 1.0),
+  'w': new V2(0, -1.0),
+  'a': new V2(-1.0, 0),
+  'd': new V2(1.0, 0)
 };
 
 class Particle {
@@ -116,11 +117,11 @@ class Particle {
 
 function particleBurs(particle, center) {
   const N = Math.random() * PARTICLE_COUNT;
-  for(let i = 0; i < N; ++i) {
+  for (let i = 0; i < N; ++i) {
     particle.push(new Particle(
-      center, 
-      V2.polarV2(Math.random() * PARTICLE_MAG, Math.random() * 2 * Math.PI), 
-      Math.random() * PARTICLE_LIFETIME, 
+      center,
+      V2.polarV2(Math.random() * PARTICLE_MAG, Math.random() * 2 * Math.PI),
+      Math.random() * PARTICLE_LIFETIME,
       Math.random() * PARTICLE_RADIUS + 10.0));
   }
 }
@@ -129,16 +130,26 @@ class Enemy {
   constructor(pos) {
     this.pos = pos;
     this.ded = false;
-  } 
-  
+  }
+
   update(dt, followPos) {
-    let vel = followPos.sub(this.pos).normalize().scale(ENEMY_SPEED * dt); 
+    let vel = followPos.sub(this.pos).normalize().scale(ENEMY_SPEED * dt);
     this.pos = this.pos.add(vel);
   }
-  
+
   render(context) {
-    fillCircle(context, this.pos, ENEMY_RADIUS, ENEMY_COLOR); 
+    fillCircle(context, this.pos, ENEMY_RADIUS, ENEMY_COLOR);
   }
+}
+
+function fillMessage(context, text, color) {
+  const width = context.canvas.width;
+  const height = context.canvas.height;
+
+  context.fillStyle = color.toRgba();
+  context.font = "30px LexendMega"
+  context.textAlign = "center";
+  context.fillText(text, width / 2, height / 2);
 }
 
 class Popup {
@@ -148,35 +159,27 @@ class Popup {
     this.text = text;
     this.onFadeOut = undefined;
     this.onFadeIn = undefined;
-  } 
+  }
 
   update(dt) {
     this.alpha += this.dalpha * dt;
 
-    if(this.dalpha < 0.0 && this.alpha <= 0.0) {
+    if (this.dalpha < 0.0 && this.alpha <= 0.0) {
       this.dalpha = 0.0;
       this.alpha = 0.0;
-      
+
       this.onFadeOut?.();
- 
-    } else if(this.dalpha > 0.0 && this.alpha >= 1.0) {
+
+    } else if (this.dalpha > 0.0 && this.alpha >= 1.0) {
       this.dalpha = 0.0;
       this.alpha = 1.0;
- 
-      if(this.onFadeIn !== undefined) {
-        this.onFadeIn();
-      }
+
+      this.onFadeIn?.();
     }
   }
 
-  render(context) {  
-    const width = context.canvas.width;
-    const height = context.canvas.height;
-
-    context.fillStyle = `rgba(255,255,255, ${this.alpha})`;
-    context.font = "30px LexendMega"
-    context.textAlign = "center";
-    context.fillText(this.text, width / 2, height / 2);
+  render(context) {
+    fillMessage(context, this.text, MESSAGE_COLOR.withAlpha(this.alpha));
   }
 
   fadeIn() {
@@ -201,8 +204,8 @@ class Bullet {
   }
 
   render(context) {
-    fillCircle(context, this.pos, BULLET_RADIUS, PLAYER_COLOR); 
-  } 
+    fillCircle(context, this.pos, BULLET_RADIUS, PLAYER_COLOR);
+  }
 }
 
 const TutorialState = Object.freeze({
@@ -227,24 +230,24 @@ class Tutorial {
       this.popup.fadeIn();
     };
   }
- 
+
   update(dt) {
     this.popup.update(dt);
-  }  
- 
+  }
+
   render(context) {
     this.popup.render(context)
   }
 
   playerMoved() {
-    if(this.state === TutorialState.LearningMovement) {
+    if (this.state === TutorialState.LearningMovement) {
       this.popup.fadeOut();
-      this.state += 1;       
+      this.state += 1;
     }
   }
 
   playerShot() {
-    if(this.state === TutorialState.LearningShooting) {
+    if (this.state === TutorialState.LearningShooting) {
       this.popup.fadeOut();
       this.state += 1;
     }
@@ -252,15 +255,15 @@ class Tutorial {
 };
 
 function renderEntities(context, entities) {
-  for(let entity of entities) {
-    entity.render(context); 
+  for (let entity of entities) {
+    entity.render(context);
   }
 }
 
 class Game {
-  pos = new V2(PLAYER_RADIUS + 10, PLAYER_RADIUS + 10); 
+  pos = new V2(PLAYER_RADIUS + 10, PLAYER_RADIUS + 10);
   mousePos = new V2(0, 0);
-  pressedKey = new Set(); 
+  pressedKey = new Set();
   tutorial = new Tutorial();
   played_move_for_the_first = false;
   bullets = [];
@@ -271,29 +274,29 @@ class Game {
   paused = false;
 
   update(dt) {
-    if(this.paused) {
+    if (this.paused) {
       return;
     }
 
-    let vel = new V2(0,0);
+    let vel = new V2(0, 0);
     let moved = false;
     for (let key of this.pressedKey) {
-      if(key in directionMap) {
+      if (key in directionMap) {
         vel = vel.add(directionMap[key].scale(PLAYER_SPEED));
         moved = true;
       }
-    } 
+    }
 
-    if(moved) {
+    if (moved) {
       this.tutorial.playerMoved();
     }
 
-    this.pos = this.pos.add(vel.scale(dt)); 
+    this.pos = this.pos.add(vel.scale(dt));
     this.tutorial.update(dt)
 
-    for (let enemy of this.enemies){
-      for (let bullet of this.bullets){
-        if(!enemy.ded && enemy.pos.dist(bullet.pos) <= BULLET_RADIUS + ENEMY_RADIUS) {
+    for (let enemy of this.enemies) {
+      for (let bullet of this.bullets) {
+        if (!enemy.ded && enemy.pos.dist(bullet.pos) <= BULLET_RADIUS + ENEMY_RADIUS) {
           enemy.ded = true;
           bullet.lifetime = 0.0;
           particleBurs(this.particles, enemy.pos);
@@ -301,37 +304,37 @@ class Game {
       }
     }
 
-    for (let bullet of this.bullets){
+    for (let bullet of this.bullets) {
       bullet.update(dt);
     }
-     
+
     this.bullets = this.bullets.filter(bullet => bullet.lifetime > 0.0);
 
-    for (let particle of this.particles){
+    for (let particle of this.particles) {
       particle.update(dt);
     }
-     
+
     this.particles = this.particles.filter(particle => particle.lifetime > 0.0);
- 
-    for (let enemy of this.enemies){
+
+    for (let enemy of this.enemies) {
       enemy.update(dt, this.pos);
-    } 
-    
-    this.enemies = this.enemies.filter(enemy => !enemy.ded); 
+    }
+
+    this.enemies = this.enemies.filter(enemy => !enemy.ded);
 
     if (this.tutorial.state == TutorialState.Finished) {
       this.enemySpawnCooldown -= dt;
-      if(this.enemySpawnCooldown <= 0.0) {
-         this.spawnEnemy(); 
-         this.enemySpawnCooldown = this.enemySpawnRate;
-         this.enemySpawnRate = Math.max(0.01, this.enemySpawnRate - 0.01);
-      } 
+      if (this.enemySpawnCooldown <= 0.0) {
+        this.spawnEnemy();
+        this.enemySpawnCooldown = this.enemySpawnRate;
+        this.enemySpawnRate = Math.max(0.01, this.enemySpawnRate - 0.01);
+      }
     }
   }
 
   spawnEnemy() {
     let dir = Math.random() * 2 * Math.PI;
-    this.enemies.push( 
+    this.enemies.push(
       new Enemy(this.pos.add(V2.polarV2(ENEMY_SPAWN_DISTANCE, dir)))
     );
   }
@@ -342,17 +345,21 @@ class Game {
 
     context.clearRect(0, 0, width, height);
     fillCircle(context, this.pos, PLAYER_RADIUS, PLAYER_COLOR);
- 
+
     renderEntities(context, this.bullets);
     renderEntities(context, this.particles);
     renderEntities(context, this.enemies);
- 
-    this.tutorial.render(context);
+
+    if (!this.paused) {
+      this.tutorial.render(context);
+    } else {
+      fillMessage(context, "PAUSED (press SPACE to resume)", MESSAGE_COLOR);
+    }
   }
 
   togglePause() {
     this.paused = !this.paused;
-    if(this.paused) {
+    if (this.paused) {
       globalFillCircleFilter = grayScaleFilter;
     } else {
       globalFillCircleFilter = idFilter;
@@ -360,7 +367,7 @@ class Game {
   }
 
   keyDown(event) {
-    if(event.code === 'Space') {
+    if (event.code === 'Space') {
       this.togglePause();
     }
 
@@ -370,21 +377,21 @@ class Game {
   keyUp(event) {
     this.pressedKey.delete(event.key);
   }
- 
+
   mouseMove(event) {
 
   }
- 
+
   mouseDown(event) {
-    if(this.paused) {
+    if (this.paused) {
       return;
     }
 
     this.tutorial.playerShot();
     const mousePos = new V2(event.offsetX, event.offsetY);
     const bulletDir = mousePos
-          .sub(this.pos)
-          .normalize();
+      .sub(this.pos)
+      .normalize();
     const bulletVel = bulletDir.scale(BULLET_SPEED);
     const bulletPos = this
       .pos
@@ -408,37 +415,37 @@ function fillCircle(context, center, radius, color) {
   context.beginPath();
   context.arc(center.x, center.y, radius, 0, 2 * Math.PI, false);
   context.fillStyle = globalFillCircleFilter(color).toRgba();
-  context.fill(); 
+  context.fill();
 }
 
 const game = new Game();
 
 (() => {
-  const canvas = document.getElementById("game"); 
+  const canvas = document.getElementById("game");
   const context = canvas.getContext("2d");
   let windowWasResized = true;
 
-  let start;  
-  function step (timestamp) {
-    if(start === undefined) {
+  let start;
+  function step(timestamp) {
+    if (start === undefined) {
       start = timestamp;
-    } 
+    }
 
     const dt = (timestamp - start) * 0.001;
     start = timestamp;
- 
+
     if (windowWasResized) {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
       windowWasResized = false;
     }
-    
+
     game.update(dt);
     game.render(context);
- 
+
     window.requestAnimationFrame(step);
   }
-  
+
   window.requestAnimationFrame(step);
 
   //Events
@@ -446,7 +453,7 @@ const game = new Game();
     game.keyDown(event);
   });
 
-  document.addEventListener('keyup', event => { 
+  document.addEventListener('keyup', event => {
     game.keyUp(event);
   });
 
@@ -457,7 +464,7 @@ const game = new Game();
   document.addEventListener('mousedown', event => {
     game.mouseDown(event);
   });
-  
+
   document.addEventListener('resize', event => {
     windowWasResized = true;
   });
