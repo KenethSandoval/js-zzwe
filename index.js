@@ -15,7 +15,7 @@ class Color {
   }
 
   grayScale() {
-    let x = Math.max(this.r, this.g, this.b);
+    let x = (this.r + this.g + this.b) / 3;
     return new Color(x, x, x, this.a);
   }
 
@@ -352,6 +352,11 @@ class Game {
 
   togglePause() {
     this.paused = !this.paused;
+    if(this.paused) {
+      globalFillCircleFilter = grayScaleFilter;
+    } else {
+      globalFillCircleFilter = idFilter;
+    }
   }
 
   keyDown(event) {
@@ -385,10 +390,20 @@ class Game {
   }
 }
 
+function grayScaleFilter(color) {
+  return color.grayScale();
+}
+
+function idFilter(color) {
+  return color;
+}
+
+let globalFillCircleFilter = idFilter;
+
 function fillCircle(context, center, radius, color) {
   context.beginPath();
   context.arc(center.x, center.y, radius, 0, 2 * Math.PI, false);
-  context.fillStyle = color.toRgba();
+  context.fillStyle = globalFillCircleFilter(color).toRgba();
   context.fill(); 
 }
 
