@@ -1,3 +1,4 @@
+
 class Color {
   constructor(r, g, b, a) {
     this.r = r;
@@ -260,12 +261,37 @@ function renderEntities(context, entities) {
   }
 }
 
+class Player {
+  constructor(pos) {
+    this.pos = pos;
+  }
+
+  render(context) {
+    fillCircle(context, this.pos, PLAYER_RADIUS, PLAYER_COLOR);
+  }
+
+  update(dt, vel) {
+    this.pos = this.pos.add(vel.scale(dt));
+  }
+
+  shootAt(target) {
+    const bulletDir = target
+      .sub(this.pos)
+      .normalize();
+    const bulletVel = bulletDir.scale(BULLET_SPEED);
+    const bulletPos = this
+      .pos
+      .add(bulletDir.scale(PLAYER_RADIUS + BULLET_RADIUS));
+
+    return new Bullet(bulletPos, bulletVel);
+  }
+}
+
 class Game {
-  pos = new V2(PLAYER_RADIUS + 10, PLAYER_RADIUS + 10);
+  player = new Player(new V2(PLAYER_RADIUS + 10, PLAYER_RADIUS + 10));
   mousePos = new V2(0, 0);
   pressedKey = new Set();
   tutorial = new Tutorial();
-  played_move_for_the_first = false;
   bullets = [];
   enemies = [];
   particles = [];
@@ -291,7 +317,7 @@ class Game {
       this.tutorial.playerMoved();
     }
 
-    this.pos = this.pos.add(vel.scale(dt));
+    this.player.update(dt, vel);
     this.tutorial.update(dt)
 
     for (let enemy of this.enemies) {
@@ -317,7 +343,7 @@ class Game {
     this.particles = this.particles.filter(particle => particle.lifetime > 0.0);
 
     for (let enemy of this.enemies) {
-      enemy.update(dt, this.pos);
+      enemy.update(dt, this.player.pos);
     }
 
     this.enemies = this.enemies.filter(enemy => !enemy.ded);
@@ -335,7 +361,7 @@ class Game {
   spawnEnemy() {
     let dir = Math.random() * 2 * Math.PI;
     this.enemies.push(
-      new Enemy(this.pos.add(V2.polarV2(ENEMY_SPAWN_DISTANCE, dir)))
+      new Enemy(this.player.pos.add(V2.polarV2(ENEMY_SPAWN_DISTANCE, dir)))
     );
   }
 
@@ -344,7 +370,7 @@ class Game {
     const height = context.canvas.height;
 
     context.clearRect(0, 0, width, height);
-    fillCircle(context, this.pos, PLAYER_RADIUS, PLAYER_COLOR);
+    this.player.render(context);
 
     renderEntities(context, this.bullets);
     renderEntities(context, this.particles);
@@ -389,15 +415,7 @@ class Game {
 
     this.tutorial.playerShot();
     const mousePos = new V2(event.offsetX, event.offsetY);
-    const bulletDir = mousePos
-      .sub(this.pos)
-      .normalize();
-    const bulletVel = bulletDir.scale(BULLET_SPEED);
-    const bulletPos = this
-      .pos
-      .add(bulletDir.scale(PLAYER_RADIUS + BULLET_RADIUS));
-
-    this.bullets.push(new Bullet(bulletPos, bulletVel));
+    this.bullets.push(this.player.shootAt(mousePos));
   }
 }
 
