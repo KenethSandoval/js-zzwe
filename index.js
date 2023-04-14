@@ -1,4 +1,3 @@
-
 class Color {
   constructor(r, g, b, a) {
     this.r = r;
@@ -71,9 +70,43 @@ class V2 {
   }
 }
 
+function grayScaleFilter(color) {
+  return color.grayScale();
+}
+
+function idFilter(color) {
+  return color;
+}
+
+let globalFillFilter = idFilter;
+
+function fillCircle(context, center, radius, color) {
+  context.fillStyle = globalFillFilter(color).toRgba();
+  context.beginPath();
+  context.arc(center.x, center.y, radius, 0, 2 * Math.PI, false);
+  context.fill();
+}
+
+function fillRect(context, x, y, w, h, color) {
+  context.fillStyle = globalFillFilter(color).toRgba();
+  context.fillRect(x, y, w, h);
+}
+
+function fillMessage(context, text, color) {
+  const width = context.canvas.width;
+  const height = context.canvas.height;
+
+  context.fillStyle = color.toRgba();
+  context.font = "30px LexendMega"
+  context.textAlign = "center";
+  context.fillText(text, width / 2, height / 2);
+}
+
 const PLAYER_RADIUS = 69;
 const PLAYER_COLOR = Color.hex("#f43841");
 const PLAYER_SPEED = 1000;
+const PLAYER_MAX_HEALTH = 100;
+const HEALTH_BAR_HEIGHT = 25;
 const TUTORIAL_POPUP_SPEED = 1.7;
 const BULLET_SPEED = 2000;
 const BULLET_RADIUS = 42;
@@ -83,6 +116,7 @@ const ENEMY_SPAWN_COOLDOWN = 1.0;
 const ENEMY_SPAWN_DISTANCE = 1500.0;
 const ENEMY_COLOR = Color.hex("#9e95c7");
 const ENEMY_RADIUS = PLAYER_RADIUS;
+const ENEMY_DAMAGE = PLAYER_MAX_HEALTH / 5;
 const PARTICLE_COUNT = 50;
 const PARTICLE_COLOR = ENEMY_COLOR;
 const PARTICLE_MAG = BULLET_SPEED;
@@ -141,16 +175,6 @@ class Enemy {
   render(context) {
     fillCircle(context, this.pos, ENEMY_RADIUS, ENEMY_COLOR);
   }
-}
-
-function fillMessage(context, text, color) {
-  const width = context.canvas.width;
-  const height = context.canvas.height;
-
-  context.fillStyle = color.toRgba();
-  context.font = "30px LexendMega"
-  context.textAlign = "center";
-  context.fillText(text, width / 2, height / 2);
 }
 
 class Popup {
@@ -262,6 +286,8 @@ function renderEntities(context, entities) {
 }
 
 class Player {
+  health = PLAYER_MAX_HEALTH;
+
   constructor(pos) {
     this.pos = pos;
   }
@@ -284,6 +310,10 @@ class Player {
       .add(bulletDir.scale(PLAYER_RADIUS + BULLET_RADIUS));
 
     return new Bullet(bulletPos, bulletVel);
+  }
+
+  damage(value) {
+    this.health = Math.max(this.health - value, 0.0);
   }
 }
 
@@ -321,11 +351,20 @@ class Game {
     this.tutorial.update(dt)
 
     for (let enemy of this.enemies) {
-      for (let bullet of this.bullets) {
-        if (!enemy.ded && enemy.pos.dist(bullet.pos) <= BULLET_RADIUS + ENEMY_RADIUS) {
+      if (!enemy.ded) {
+        for (let bullet of this.bullets) {
+          if (enemy.pos.dist(bullet.pos) <= BULLET_RADIUS + ENEMY_RADIUS) {
+            enemy.ded = true;
+            bullet.lifetime = 0.0;
+            particleBurs(this.particles, enemy.pos);
+          }
+        }
+      }
+
+      if(!enemy.ded) {
+        if (enemy.pos.dist(this.player.pos) <= PLAYER_RADIUS + ENEMY_RADIUS) {
           enemy.ded = true;
-          bullet.lifetime = 0.0;
-          particleBurs(this.particles, enemy.pos);
+          this.player.damage(ENEMY_DAMAGE);
         }
       }
     }
@@ -381,14 +420,16 @@ class Game {
     } else {
       fillMessage(context, "PAUSED (press SPACE to resume)", MESSAGE_COLOR);
     }
+
+    fillRect(context, 0, 0, width * (this.player.health / PLAYER_MAX_HEALTH), HEALTH_BAR_HEIGHT, PLAYER_COLOR);
   }
 
   togglePause() {
     this.paused = !this.paused;
     if (this.paused) {
-      globalFillCircleFilter = grayScaleFilter;
+      globalFillFilter = grayScaleFilter;
     } else {
-      globalFillCircleFilter = idFilter;
+      globalFillFilter = idFilter;
     }
   }
 
@@ -417,23 +458,6 @@ class Game {
     const mousePos = new V2(event.offsetX, event.offsetY);
     this.bullets.push(this.player.shootAt(mousePos));
   }
-}
-
-function grayScaleFilter(color) {
-  return color.grayScale();
-}
-
-function idFilter(color) {
-  return color;
-}
-
-let globalFillCircleFilter = idFilter;
-
-function fillCircle(context, center, radius, color) {
-  context.beginPath();
-  context.arc(center.x, center.y, radius, 0, 2 * Math.PI, false);
-  context.fillStyle = globalFillCircleFilter(color).toRgba();
-  context.fill();
 }
 
 const game = new Game();
