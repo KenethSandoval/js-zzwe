@@ -119,7 +119,6 @@ const ENEMY_COLOR = Color.hex("#9e95c7");
 const ENEMY_RADIUS = PLAYER_RADIUS;
 const ENEMY_DAMAGE = PLAYER_MAX_HEALTH / 5;
 const PARTICLE_COUNT = 50;
-const PARTICLE_COLOR = ENEMY_COLOR;
 const PARTICLE_MAG = BULLET_SPEED;
 const PARTICLE_LIFETIME = 1.0;
 const PARTICLE_RADIUS = 10.0;
@@ -133,16 +132,17 @@ const directionMap = {
 };
 
 class Particle {
-  constructor(pos, vel, lifetime, radius) {
+  constructor(pos, vel, lifetime, radius, color) {
     this.pos = pos;
     this.vel = vel;
     this.lifetime = lifetime;
     this.radius = radius
+    this.color = color;
   }
 
   render(context) {
     const a = this.lifetime / PARTICLE_LIFETIME;
-    fillCircle(context, this.pos, this.radius, PARTICLE_COLOR.withAlpha(a));
+    fillCircle(context, this.pos, this.radius, this.color.withAlpha(a));
   }
 
   update(dt) {
@@ -151,14 +151,14 @@ class Particle {
   }
 }
 
-function particleBurs(particle, center) {
+function particleBurs(particle, center, color) {
   const N = Math.random() * PARTICLE_COUNT;
   for (let i = 0; i < N; ++i) {
     particle.push(new Particle(
       center,
       V2.polarV2(Math.random() * PARTICLE_MAG, Math.random() * 2 * Math.PI),
       Math.random() * PARTICLE_LIFETIME,
-      Math.random() * PARTICLE_RADIUS + 10.0));
+      Math.random() * PARTICLE_RADIUS + 10.0, color));
   }
 }
 
@@ -355,17 +355,18 @@ class Game {
       if (!enemy.ded) {
         for (let bullet of this.bullets) {
           if (enemy.pos.dist(bullet.pos) <= BULLET_RADIUS + ENEMY_RADIUS) {
-            enemy.ded = true;
             bullet.lifetime = 0.0;
-            particleBurs(this.particles, enemy.pos);
+            enemy.ded = true;
+            particleBurs(this.particles, enemy.pos, ENEMY_COLOR);
           }
         }
       }
 
       if(!enemy.ded) {
         if (enemy.pos.dist(this.player.pos) <= PLAYER_RADIUS + ENEMY_RADIUS) {
-          enemy.ded = true;
           this.player.damage(ENEMY_DAMAGE);
+          enemy.ded = true;
+          particleBurs(this.particles, enemy.pos, PLAYER_COLOR);
         }
       }
     }
