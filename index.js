@@ -296,8 +296,6 @@ class Player {
   render(context) {
     if (this.health > 0.0) {
       fillCircle(context, this.pos, PLAYER_RADIUS, PLAYER_COLOR);
-    } else {
-      fillMessage(context, "GAME OVER", MESSAGE_COLOR);
     }
   }
 
@@ -340,7 +338,7 @@ class Game {
     }
 
     if (this.player.health <= 0.0) {
-      dt /= 2;
+      dt /= 50;
     }
 
     let vel = new V2(0, 0);
@@ -373,6 +371,9 @@ class Game {
       if(this.player.health > 0.0 && !enemy.ded) {
         if (enemy.pos.dist(this.player.pos) <= PLAYER_RADIUS + ENEMY_RADIUS) {
           this.player.damage(ENEMY_DAMAGE);
+          if (this.player.health <= 0.0) {
+            globalFillFilter = grayScaleFilter;
+          }
           enemy.ded = true;
           particleBurs(this.particles, enemy.pos, PLAYER_COLOR);
         }
@@ -425,10 +426,12 @@ class Game {
     renderEntities(context, this.particles);
     renderEntities(context, this.enemies);
 
-    if (!this.paused) {
-      this.tutorial.render(context);
-    } else {
+    if (this.paused) {
       fillMessage(context, "PAUSED (press SPACE to resume)", MESSAGE_COLOR);
+    } else if (this.player.health <= 0.0) {
+      fillMessage(context, "GAME OVER", MESSAGE_COLOR);
+    } else {
+      this.tutorial.render(context);
     }
 
     fillRect(context, 0, 0, width * (this.player.health / PLAYER_MAX_HEALTH), HEALTH_BAR_HEIGHT, PLAYER_COLOR);
