@@ -294,7 +294,11 @@ class Player {
   }
 
   render(context) {
-    fillCircle(context, this.pos, PLAYER_RADIUS, PLAYER_COLOR);
+    if (this.health > 0.0) {
+      fillCircle(context, this.pos, PLAYER_RADIUS, PLAYER_COLOR);
+    } else {
+      fillMessage(context, "GAME OVER", MESSAGE_COLOR);
+    }
   }
 
   update(dt, vel) {
@@ -335,6 +339,10 @@ class Game {
       return;
     }
 
+    if (this.player.health <= 0.0) {
+      dt /= 2;
+    }
+
     let vel = new V2(0, 0);
     let moved = false;
     for (let key of this.pressedKey) {
@@ -362,7 +370,7 @@ class Game {
         }
       }
 
-      if(!enemy.ded) {
+      if(this.player.health > 0.0 && !enemy.ded) {
         if (enemy.pos.dist(this.player.pos) <= PLAYER_RADIUS + ENEMY_RADIUS) {
           this.player.damage(ENEMY_DAMAGE);
           enemy.ded = true;
