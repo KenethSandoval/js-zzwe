@@ -427,9 +427,9 @@ class Game {
     renderEntities(context, this.enemies);
 
     if (this.paused) {
-      fillMessage(context, "PAUSED (press SPACE to resume)", MESSAGE_COLOR);
+      fillMessage(context, "PAUSED (SPACE to resume)", MESSAGE_COLOR);
     } else if (this.player.health <= 0.0) {
-      fillMessage(context, "GAME OVER", MESSAGE_COLOR);
+      fillMessage(context, "GAME OVER (F5 to reset)", MESSAGE_COLOR);
     } else {
       this.tutorial.render(context);
     }
@@ -447,6 +447,10 @@ class Game {
   }
 
   keyDown(event) {
+    if (this.player.health <= 0.0) {
+      return;
+    }
+
     if (event.code === 'Space') {
       this.togglePause();
     }
@@ -464,6 +468,10 @@ class Game {
 
   mouseDown(event) {
     if (this.paused) {
+      return;
+    }
+
+    if (this.player.health <= 0.0) {
       return;
     }
 
