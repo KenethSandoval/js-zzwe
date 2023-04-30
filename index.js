@@ -1,3 +1,6 @@
+function lerp(a, b, t) {
+  return a + (b - a) * t;
+}
 
 class Color {
   constructor(r, g, b, a) {
@@ -15,9 +18,13 @@ class Color {
     return new Color(this.r, this.g, this.b, a);
   }
 
-  grayScale() {
+  grayScale(t = 1.0) {
     let x = (this.r + this.g + this.b) / 3;
-    return new Color(x, x, x, this.a);
+    return new Color(
+      lerp(this.r,x, t),
+      lerp(this.g, x, t), 
+      lerp(this.b, x, t), 
+      this.a);
   }
 
   static hex(hexcolor) {
@@ -71,25 +78,17 @@ class V2 {
   }
 }
 
-function grayScaleFilter(color) {
-  return color.grayScale();
-}
-
-function idFilter(color) {
-  return color;
-}
-
-let globalFillFilter = idFilter;
+let globalGrayness = 0.0;
 
 function fillCircle(context, center, radius, color) {
-  context.fillStyle = globalFillFilter(color).toRgba();
+  context.fillStyle = color.grayScale(globalGrayness).toRgba();
   context.beginPath();
   context.arc(center.x, center.y, radius, 0, 2 * Math.PI, false);
   context.fill();
 }
 
 function fillRect(context, x, y, w, h, color) {
-  context.fillStyle = globalFillFilter(color).toRgba();
+  context.fillStyle = color.grayScale(globalGrayness).toRgba();
   context.fillRect(x, y, w, h);
 }
 
@@ -107,7 +106,7 @@ const PLAYER_RADIUS = 69;
 const PLAYER_COLOR = Color.hex("#f43841");
 const PLAYER_SPEED = 1000;
 const PLAYER_MAX_HEALTH = 100;
-const HEALTH_BAR_HEIGHT = 25;
+const HEALTH_BAR_HEIGHT = 10;
 const TUTORIAL_POPUP_SPEED = 1.7;
 const BULLET_SPEED = 2000;
 const BULLET_RADIUS = 42;
@@ -118,6 +117,7 @@ const ENEMY_SPAWN_DISTANCE = 1500.0;
 const ENEMY_COLOR = Color.hex("#9e95c7");
 const ENEMY_RADIUS = PLAYER_RADIUS;
 const ENEMY_DAMAGE = PLAYER_MAX_HEALTH / 5;
+const ENEMY_KILL_HEAL = PLAYER_MAX_HEALTH / 10;
 const PARTICLE_COUNT = 50;
 const PARTICLE_MAG = BULLET_SPEED;
 const PARTICLE_LIFETIME = 1.0;
@@ -318,6 +318,10 @@ class Player {
   damage(value) {
     this.health = Math.max(this.health - value, 0.0);
   }
+
+  heal(value) {
+    this.health = Math.min(this.health + value, PLAYER_MAX_HEALTH);
+  }
 }
 
 class Game {
@@ -334,7 +338,10 @@ class Game {
 
   update(dt) {
     if (this.paused) {
+      globalGrayness = 1.0;
       return;
+    } else {
+      globalGrayness = 1.0 - this.player.health / PLAYER_MAX_HEALTH;
     }
 
     if (this.player.health <= 0.0) {
@@ -361,6 +368,7 @@ class Game {
       if (!enemy.ded) {
         for (let bullet of this.bullets) {
           if (enemy.pos.dist(bullet.pos) <= BULLET_RADIUS + ENEMY_RADIUS) {
+            this.player.heal(ENEMY_KILL_HEAL);
             bullet.lifetime = 0.0;
             enemy.ded = true;
             particleBurs(this.particles, enemy.pos, ENEMY_COLOR);
@@ -371,9 +379,6 @@ class Game {
       if(this.player.health > 0.0 && !enemy.ded) {
         if (enemy.pos.dist(this.player.pos) <= PLAYER_RADIUS + ENEMY_RADIUS) {
           this.player.damage(ENEMY_DAMAGE);
-          if (this.player.health <= 0.0) {
-            globalFillFilter = grayScaleFilter;
-          }
           enemy.ded = true;
           particleBurs(this.particles, enemy.pos, PLAYER_COLOR);
         }
@@ -434,16 +439,11 @@ class Game {
       this.tutorial.render(context);
     }
 
-    fillRect(context, 0, 0, width * (this.player.health / PLAYER_MAX_HEALTH), HEALTH_BAR_HEIGHT, PLAYER_COLOR);
+    fillRect(context, 0, height - HEALTH_BAR_HEIGHT, width * (this.player.health / PLAYER_MAX_HEALTH), HEALTH_BAR_HEIGHT, PLAYER_COLOR);
   }
 
   togglePause() {
     this.paused = !this.paused;
-    if (this.paused) {
-      globalFillFilter = grayScaleFilter;
-    } else {
-      globalFillFilter = idFilter;
-    }
   }
 
   keyDown(event) {
