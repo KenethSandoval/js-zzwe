@@ -116,6 +116,7 @@ const ENEMY_SPAWN_COOLDOWN = 1.0;
 const ENEMY_SPAWN_DISTANCE = 1500.0;
 const ENEMY_COLOR = Color.hex("#9e95c7");
 const ENEMY_RADIUS = PLAYER_RADIUS;
+const ENEMY_KILL_SCORE = 100;
 const ENEMY_DAMAGE = PLAYER_MAX_HEALTH / 5;
 const ENEMY_KILL_HEAL = PLAYER_MAX_HEALTH / 10;
 const PARTICLE_COUNT = 50;
@@ -326,6 +327,7 @@ class Player {
 
 class Game {
   player = new Player(new V2(PLAYER_RADIUS + 10, PLAYER_RADIUS + 10));
+  score = 0;
   mousePos = new V2(0, 0);
   pressedKey = new Set();
   tutorial = new Tutorial();
@@ -368,6 +370,7 @@ class Game {
       if (!enemy.ded) {
         for (let bullet of this.bullets) {
           if (enemy.pos.dist(bullet.pos) <= BULLET_RADIUS + ENEMY_RADIUS) {
+            this.score += ENEMY_KILL_SCORE;
             this.player.heal(ENEMY_KILL_HEAL);
             bullet.lifetime = 0.0;
             enemy.ded = true;
@@ -434,7 +437,7 @@ class Game {
     if (this.paused) {
       fillMessage(context, "PAUSED (SPACE to resume)", MESSAGE_COLOR);
     } else if (this.player.health <= 0.0) {
-      fillMessage(context, "GAME OVER (F5 to reset)", MESSAGE_COLOR);
+      fillMessage(context, `GAME OVER (F5 to reset)\n YOUR SCORE: ${this.score}`, MESSAGE_COLOR);
     } else {
       this.tutorial.render(context);
     }
