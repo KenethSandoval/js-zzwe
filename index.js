@@ -78,28 +78,49 @@ class V2 {
   }
 }
 
-let globalGrayness = 0.0;
+class Camera {
+  pos = new V2(0.0, 0.0);
+  vel = new V2(0.0, 0.0);
+  grayness = 0.0;
 
-function fillCircle(context, center, radius, color) {
-  context.fillStyle = color.grayScale(globalGrayness).toRgba();
-  context.beginPath();
-  context.arc(center.x, center.y, radius, 0, 2 * Math.PI, false);
-  context.fill();
-}
+  constructor(context) {
+    this.context = context;
+  }
+ 
+  clear() {
+    const width = this.context.canvas.width;
+    const height = this.context.canvas.height;
+    this.context.clearRect(0,0, width, height);
+  }
 
-function fillRect(context, x, y, w, h, color) {
-  context.fillStyle = color.grayScale(globalGrayness).toRgba();
-  context.fillRect(x, y, w, h);
-}
 
-function fillMessage(context, text, color) {
-  const width = context.canvas.width;
-  const height = context.canvas.height;
+  fillCircle(center, radius, color) {
+    let screenCenter = center.sub(this.pos);
 
-  context.fillStyle = color.toRgba();
-  context.font = "30px LexendMega"
-  context.textAlign = "center";
-  context.fillText(text, width / 2, height / 2);
+    this.context.fillStyle = color.grayScale(this.grayness).toRgba();
+    this.context.beginPath();
+    this.context.arc(screenCenter.x, screenCenter.y, radius, 0, 2 * Math.PI, false);
+    this.context.fill();
+  }
+
+  fillRect(x, y, w, h, color) {
+    let screenPos =new V2(x, y).sub(this.pos);
+
+   this.context.fillStyle = color.grayScale(this.grayness).toRgba();
+   this.context.fillRect(screenPos.x, screenPos.y, w, h);
+  }
+
+  fillMessage(text, color) {
+    const width = this.context.canvas.width;
+    const height = this.context.canvas.height;
+  
+    this.context.fillStyle = color.toRgba();
+    this.context.font = "30px LexendMega"
+    this.context.textAlign = "center";
+    this.context.fillText(text, width / 2, height / 2);
+  }
+
+
 }
 
 const PLAYER_RADIUS = 69;
@@ -338,6 +359,10 @@ class Game {
   enemySpawnCooldown = this.enemySpawnRate;
   paused = false;
 
+  constructor(context) {
+    this.camera = new Camera(context);
+  }
+
   update(dt) {
     if (this.paused) {
       globalGrayness = 1.0;
@@ -423,11 +448,11 @@ class Game {
     );
   }
 
-  render(context) {
-    const width = context.canvas.width;
-    const height = context.canvas.height;
+  render() {
+    const width = this.camera.context.canvas.width;
+    const height = this.camera.context.canvas.height;
 
-    context.clearRect(0, 0, width, height);
+    this.camera.clear();
     this.player.render(context);
 
     renderEntities(context, this.bullets);
@@ -484,12 +509,13 @@ class Game {
   }
 }
 
-const game = new Game();
 
 (() => {
   const canvas = document.getElementById("game");
   const context = canvas.getContext("2d");
   let windowWasResized = true;
+
+  const game = new Game(context);
 
   let start;
   function step(timestamp) {
@@ -507,7 +533,7 @@ const game = new Game();
     }
 
     game.update(dt);
-    game.render(context);
+    game.render();
 
     window.requestAnimationFrame(step);
   }
