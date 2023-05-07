@@ -357,7 +357,7 @@ class Player {
 }
 
 class Game {
-  player = new Player(new V2(PLAYER_RADIUS + 10, PLAYER_RADIUS + 10));
+  player = new Player(new V2(0,0));
   score = 0;
   mousePos = new V2(0, 0);
   pressedKey = new Set();
