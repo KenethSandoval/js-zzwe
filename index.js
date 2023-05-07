@@ -606,6 +606,10 @@ class Game {
 
   const game = new Game(context);
 
+  if (window.matchMedia("(pointer: coarse)").matches) {
+    game.tutorial.playerMoved();
+  }
+
   let start;
   function step(timestamp) {
     if (start === undefined) {
@@ -638,11 +642,11 @@ class Game {
     game.keyUp(event);
   });
 
-  document.addEventListener('mousemove', event => {
+  document.addEventListener('pointermove', event => {
     game.mouseMove(event);
   });
 
-  document.addEventListener('mousedown', event => {
+  document.addEventListener('pointerdown', event => {
     game.mouseDown(event);
   });
 
