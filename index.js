@@ -11,7 +11,7 @@ class Color {
   }
 
   toRgba() {
-    return `rgba(${this.r * 255}, ${this.g * 255}, ${this.b * 255}, ${this.a * 255})`;
+    return `rgba(${this.r * 255}, ${this.g * 255}, ${this.b * 255}, ${this.a})`;
   }
 
   withAlpha(a) {
@@ -21,9 +21,9 @@ class Color {
   grayScale(t = 1.0) {
     let x = (this.r + this.g + this.b) / 3;
     return new Color(
-      lerp(this.r,x, t),
-      lerp(this.g, x, t), 
-      lerp(this.b, x, t), 
+      lerp(this.r, x, t),
+      lerp(this.g, x, t),
+      lerp(this.b, x, t),
       this.a);
   }
 
@@ -99,6 +99,12 @@ class Camera {
     return this.context.canvas.height;
   }
 
+  toWorld(point) {
+    const width = this.context.canvas.width;
+    const height = this.context.canvas.height;
+    return point.sub(new V2(width / 2, height / 2)).add(this.pos);
+  }
+
   toScreen(point) {
     const width = this.context.canvas.width;
     const height = this.context.canvas.height;
@@ -108,7 +114,11 @@ class Camera {
   clear() {
     const width = this.context.canvas.width;
     const height = this.context.canvas.height;
-    this.context.clearRect(0,0, width, height);
+    this.context.clearRect(0, 0, width, height);
+  }
+
+  setTarget(target) {
+    this.vel = target.sub(this.pos);
   }
 
   fillCircle(center, radius, color) {
@@ -123,18 +133,18 @@ class Camera {
   fillRect(x, y, w, h, color) {
     let screenPos = new V2(x, y).sub(this.pos);
 
-   this.context.fillStyle = color.grayScale(this.grayness).toRgba();
-   this.context.fillRect(screenPos.x, screenPos.y, w, h);
+    this.context.fillStyle = color.grayScale(this.grayness).toRgba();
+    this.context.fillRect(screenPos.x, screenPos.y, w, h);
   }
 
   fillMessage(text, color) {
     const width = this.context.canvas.width;
     const height = this.context.canvas.height;
-  
+
     this.context.fillStyle = color.toRgba();
     this.context.font = "30px LexendMega"
     this.context.textAlign = "center";
-    this.context.fillText(text, width / 2, height / 2);
+    this.context.fillText(text, width / 2, height / 2 + 10);
   }
 
 }
@@ -143,6 +153,7 @@ const PLAYER_RADIUS = 69;
 const PLAYER_COLOR = Color.hex("#f43841");
 const PLAYER_SPEED = 1000;
 const PLAYER_MAX_HEALTH = 100;
+const PLAYER_TRAIL_RATE = 1.0;
 const HEALTH_BAR_HEIGHT = 10;
 const TUTORIAL_POPUP_SPEED = 1.7;
 const BULLET_SPEED = 2000;
@@ -156,6 +167,7 @@ const ENEMY_RADIUS = PLAYER_RADIUS;
 const ENEMY_KILL_SCORE = 100;
 const ENEMY_DAMAGE = PLAYER_MAX_HEALTH / 5;
 const ENEMY_KILL_HEAL = PLAYER_MAX_HEALTH / 10;
+const ENEMY_TRAIL_RATE = 2.0;
 const PARTICLE_COUNT = 50;
 const PARTICLE_MAG = BULLET_SPEED;
 const PARTICLE_LIFETIME = 1.0;
@@ -201,6 +213,8 @@ function particleBurs(particle, center, color) {
 }
 
 class Enemy {
+  trail = new Trail(ENEMY_RADIUS, ENEMY_COLOR, ENEMY_TRAIL_RATE);
+
   constructor(pos) {
     this.pos = pos;
     this.ded = false;
@@ -208,10 +222,13 @@ class Enemy {
 
   update(dt, followPos) {
     let vel = followPos.sub(this.pos).normalize().scale(ENEMY_SPEED * dt);
+    this.trail.push(this.pos);
     this.pos = this.pos.add(vel);
+    this.trail.update(dt);
   }
 
   render(camera) {
+    this.trail.render(camera);
     camera.fillCircle(this.pos, ENEMY_RADIUS, ENEMY_COLOR);
   }
 }
@@ -318,21 +335,61 @@ class Tutorial {
   }
 };
 
+class Trail {
+  trail = [];
+  cooldown = 0;
+
+  constructor(radius, color, rate) {
+    this.radius = radius;
+    this.color = color;
+    this.rate = rate;
+  }
+
+  render(camera) {
+    const n = this.trail.length;
+    for (let i = 0; i < n; ++i) {
+      camera.fillCircle(this.trail[i].pos, PLAYER_RADIUS * (i / n), this.color.withAlpha(this.radius * this.trail[i].a));
+    }
+  }
+
+  update(dt) {
+    for (let dot of this.trail) {
+      dot.a -= this.rate * dt;
+    }
+
+    this.trail = this.trail.filter(x => x.a > 0.0);
+  }
+
+  push(pos) {
+    if (this.cooldown !== 0) {
+      this.trail.push({
+        pos,
+        a: 1.0
+      });
+    }
+    this.cooldown = 1 / 15; 
+  }
+}
+
 class Player {
   health = PLAYER_MAX_HEALTH;
+  trail = new Trail(PLAYER_RADIUS, PLAYER_COLOR, PLAYER_TRAIL_RATE);
 
   constructor(pos) {
     this.pos = pos;
   }
 
   render(camera) {
+    this.trail.render(camera);
     if (this.health > 0.0) {
       camera.fillCircle(this.pos, PLAYER_RADIUS, PLAYER_COLOR);
     }
   }
 
   update(dt, vel) {
+    this.trail.push(this.pos);
     this.pos = this.pos.add(vel.scale(dt));
+    this.trail.update(dt);
   }
 
   shootAt(target) {
@@ -357,7 +414,7 @@ class Player {
 }
 
 class Game {
-  player = new Player(new V2(0,0));
+  player = new Player(new V2(0, 0));
   score = 0;
   mousePos = new V2(0, 0);
   pressedKey = new Set();
@@ -384,6 +441,9 @@ class Game {
     if (this.player.health <= 0.0) {
       dt /= 50;
     }
+
+    this.camera.setTarget(this.player.pos);
+    this.camera.update(dt);
 
     let vel = new V2(0, 0);
     let moved = false;
@@ -414,7 +474,7 @@ class Game {
         }
       }
 
-      if(this.player.health > 0.0 && !enemy.ded) {
+      if (this.player.health > 0.0 && !enemy.ded) {
         if (enemy.pos.dist(this.player.pos) <= PLAYER_RADIUS + ENEMY_RADIUS) {
           this.player.damage(ENEMY_DAMAGE);
           enemy.ded = true;
@@ -457,7 +517,7 @@ class Game {
       new Enemy(this.player.pos.add(V2.polarV2(ENEMY_SPAWN_DISTANCE, dir)))
     );
   }
- 
+
   renderEntities(entities) {
     for (let entity of entities) {
       entity.render(this.camera);
@@ -465,8 +525,8 @@ class Game {
   }
 
   render() {
-    const width = this.camera.width();
-    const height = this.camera.height();
+    //const width = this.camera.width();
+    //const height = this.camera.height();
 
     this.camera.clear();
     this.player.render(this.camera);
@@ -483,7 +543,7 @@ class Game {
       this.tutorial.render(this.camera);
     }
 
-    this.camera.fillRect(0, height - HEALTH_BAR_HEIGHT, width * (this.player.health / PLAYER_MAX_HEALTH), HEALTH_BAR_HEIGHT, PLAYER_COLOR);
+    //this.camera.fillRect(0, height - HEALTH_BAR_HEIGHT, width * (this.player.health / PLAYER_MAX_HEALTH), HEALTH_BAR_HEIGHT, PLAYER_COLOR);
   }
 
   togglePause() {
@@ -521,7 +581,7 @@ class Game {
 
     this.tutorial.playerShot();
     const mousePos = new V2(event.offsetX, event.offsetY);
-    this.bullets.push(this.player.shootAt(mousePos));
+    this.bullets.push(this.player.shootAt(this.camera.toWorld(mousePos)));
   }
 }
 
