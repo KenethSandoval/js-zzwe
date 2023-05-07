@@ -87,6 +87,10 @@ class Camera {
     this.context = context;
   }
 
+  update(dt) {
+    this.pos = this.pos.add(this.vel.scale(dt));
+  }
+
   width() {
     return this.context.canvas.width;
   }
@@ -94,16 +98,21 @@ class Camera {
   height() {
     return this.context.canvas.height;
   }
- 
+
+  toScreen(point) {
+    const width = this.context.canvas.width;
+    const height = this.context.canvas.height;
+    return point.sub(this.pos).add(new V2(width / 2, height / 2));
+  }
+
   clear() {
     const width = this.context.canvas.width;
     const height = this.context.canvas.height;
     this.context.clearRect(0,0, width, height);
   }
 
-
   fillCircle(center, radius, color) {
-    let screenCenter = center.sub(this.pos);
+    let screenCenter = this.toScreen(center);
 
     this.context.fillStyle = color.grayScale(this.grayness).toRgba();
     this.context.beginPath();
@@ -112,7 +121,7 @@ class Camera {
   }
 
   fillRect(x, y, w, h, color) {
-    let screenPos =new V2(x, y).sub(this.pos);
+    let screenPos = new V2(x, y).sub(this.pos);
 
    this.context.fillStyle = color.grayScale(this.grayness).toRgba();
    this.context.fillRect(screenPos.x, screenPos.y, w, h);
