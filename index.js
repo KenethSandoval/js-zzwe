@@ -86,6 +86,14 @@ class Camera {
   constructor(context) {
     this.context = context;
   }
+
+  width() {
+    return this.context.canvas.width;
+  }
+
+  height() {
+    return this.context.canvas.height;
+  }
  
   clear() {
     const width = this.context.canvas.width;
@@ -119,7 +127,6 @@ class Camera {
     this.context.textAlign = "center";
     this.context.fillText(text, width / 2, height / 2);
   }
-
 
 }
 
@@ -162,9 +169,9 @@ class Particle {
     this.color = color;
   }
 
-  render(context) {
+  render(camera) {
     const a = this.lifetime / PARTICLE_LIFETIME;
-    fillCircle(context, this.pos, this.radius, this.color.withAlpha(a));
+    camera.fillCircle(this.pos, this.radius, this.color.withAlpha(a));
   }
 
   update(dt) {
@@ -195,8 +202,8 @@ class Enemy {
     this.pos = this.pos.add(vel);
   }
 
-  render(context) {
-    fillCircle(context, this.pos, ENEMY_RADIUS, ENEMY_COLOR);
+  render(camera) {
+    camera.fillCircle(this.pos, ENEMY_RADIUS, ENEMY_COLOR);
   }
 }
 
@@ -226,8 +233,8 @@ class Popup {
     }
   }
 
-  render(context) {
-    fillMessage(context, this.text, MESSAGE_COLOR.withAlpha(this.alpha));
+  render(camera) {
+    camera.fillMessage(this.text, MESSAGE_COLOR.withAlpha(this.alpha));
   }
 
   fadeIn() {
@@ -251,8 +258,8 @@ class Bullet {
     this.lifetime -= dt;
   }
 
-  render(context) {
-    fillCircle(context, this.pos, BULLET_RADIUS, PLAYER_COLOR);
+  render(camera) {
+    camera.fillCircle(this.pos, BULLET_RADIUS, PLAYER_COLOR);
   }
 }
 
@@ -283,8 +290,8 @@ class Tutorial {
     this.popup.update(dt);
   }
 
-  render(context) {
-    this.popup.render(context)
+  render(camera) {
+    this.popup.render(camera)
   }
 
   playerMoved() {
@@ -302,12 +309,6 @@ class Tutorial {
   }
 };
 
-function renderEntities(context, entities) {
-  for (let entity of entities) {
-    entity.render(context);
-  }
-}
-
 class Player {
   health = PLAYER_MAX_HEALTH;
 
@@ -315,9 +316,9 @@ class Player {
     this.pos = pos;
   }
 
-  render(context) {
+  render(camera) {
     if (this.health > 0.0) {
-      fillCircle(context, this.pos, PLAYER_RADIUS, PLAYER_COLOR);
+      camera.fillCircle(this.pos, PLAYER_RADIUS, PLAYER_COLOR);
     }
   }
 
@@ -365,10 +366,10 @@ class Game {
 
   update(dt) {
     if (this.paused) {
-      globalGrayness = 1.0;
+      this.camera.grayness = 1.0;
       return;
     } else {
-      globalGrayness = 1.0 - this.player.health / PLAYER_MAX_HEALTH;
+      this.camera.grayness = 1.0 - this.player.health / PLAYER_MAX_HEALTH;
     }
 
     if (this.player.health <= 0.0) {
@@ -447,27 +448,33 @@ class Game {
       new Enemy(this.player.pos.add(V2.polarV2(ENEMY_SPAWN_DISTANCE, dir)))
     );
   }
+ 
+  renderEntities(entities) {
+    for (let entity of entities) {
+      entity.render(this.camera);
+    }
+  }
 
   render() {
-    const width = this.camera.context.canvas.width;
-    const height = this.camera.context.canvas.height;
+    const width = this.camera.width();
+    const height = this.camera.height();
 
     this.camera.clear();
-    this.player.render(context);
+    this.player.render(this.camera);
 
-    renderEntities(context, this.bullets);
-    renderEntities(context, this.particles);
-    renderEntities(context, this.enemies);
+    this.renderEntities(this.bullets);
+    this.renderEntities(this.particles);
+    this.renderEntities(this.enemies);
 
     if (this.paused) {
-      fillMessage(context, "PAUSED (SPACE to resume)", MESSAGE_COLOR);
+      this.camera.fillMessage("PAUSED (SPACE to resume)", MESSAGE_COLOR);
     } else if (this.player.health <= 0.0) {
-      fillMessage(context, `GAME OVER (F5 to reset)\n YOUR SCORE: ${this.score}`, MESSAGE_COLOR);
+      this.camera.fillMessage(`GAME OVER (F5 to reset)\n YOUR SCORE: ${this.score}`, MESSAGE_COLOR);
     } else {
-      this.tutorial.render(context);
+      this.tutorial.render(this.camera);
     }
 
-    fillRect(context, 0, height - HEALTH_BAR_HEIGHT, width * (this.player.health / PLAYER_MAX_HEALTH), HEALTH_BAR_HEIGHT, PLAYER_COLOR);
+    this.camera.fillRect(0, height - HEALTH_BAR_HEIGHT, width * (this.player.health / PLAYER_MAX_HEALTH), HEALTH_BAR_HEIGHT, PLAYER_COLOR);
   }
 
   togglePause() {
