@@ -122,8 +122,7 @@ class Camera {
   }
 
   fillCircle(center, radius, color) {
-    let screenCenter = this.toScreen(center);
-
+    const screenCenter = this.toScreen(center);
     this.context.fillStyle = color.grayScale(this.grayness).toRgba();
     this.context.beginPath();
     this.context.arc(screenCenter.x, screenCenter.y, radius, 0, 2 * Math.PI, false);
@@ -131,8 +130,7 @@ class Camera {
   }
 
   fillRect(x, y, w, h, color) {
-    let screenPos = new V2(x, y).sub(this.pos);
-
+    const screenPos = new V2(x, y).sub(this.pos);
     this.context.fillStyle = color.grayScale(this.grayness).toRgba();
     this.context.fillRect(screenPos.x, screenPos.y, w, h);
   }
@@ -153,7 +151,7 @@ const PLAYER_RADIUS = 69;
 const PLAYER_COLOR = Color.hex("#f43841");
 const PLAYER_SPEED = 1000;
 const PLAYER_MAX_HEALTH = 100;
-const PLAYER_TRAIL_RATE = 1.0;
+const PLAYER_TRAIL_RATE = 3.0;
 const HEALTH_BAR_HEIGHT = 10;
 const TUTORIAL_POPUP_SPEED = 1.7;
 const BULLET_SPEED = 2000;
@@ -173,6 +171,7 @@ const PARTICLE_MAG = BULLET_SPEED;
 const PARTICLE_LIFETIME = 1.0;
 const PARTICLE_RADIUS = 10.0;
 const MESSAGE_COLOR = Color.hex("#ffffff");
+const TRAIL_COOLDOWN = 1 / 60;
 
 const directionMap = {
   's': new V2(0, 1.0),
@@ -338,6 +337,7 @@ class Tutorial {
 class Trail {
   trail = [];
   cooldown = 0;
+  disable = false;
 
   constructor(radius, color, rate) {
     this.radius = radius;
@@ -348,7 +348,10 @@ class Trail {
   render(camera) {
     const n = this.trail.length;
     for (let i = 0; i < n; ++i) {
-      camera.fillCircle(this.trail[i].pos, PLAYER_RADIUS * (i / n), this.color.withAlpha(this.radius * this.trail[i].a));
+      camera.fillCircle(
+        this.trail[i].pos,
+        this.radius * this.trail[i].a,
+        this.color.withAlpha(0.2 * this.trail[i].a));
     }
   }
 
@@ -357,17 +360,21 @@ class Trail {
       dot.a -= this.rate * dt;
     }
 
-    this.trail = this.trail.filter(x => x.a > 0.0);
+    while (this.trail.length > 0 && this.trail[0].a <= 0.0) {
+      this.trail.shift();
+    }
+    
+    this.cooldown -= dt;
   }
 
   push(pos) {
-    if (this.cooldown !== 0) {
+    if (!this.disable && this.cooldown <= 0) {
       this.trail.push({
         pos,
         a: 1.0
       });
+      this.cooldown = TRAIL_COOLDOWN;
     }
-    this.cooldown = 1 / 15; 
   }
 }
 
@@ -477,6 +484,12 @@ class Game {
       if (this.player.health > 0.0 && !enemy.ded) {
         if (enemy.pos.dist(this.player.pos) <= PLAYER_RADIUS + ENEMY_RADIUS) {
           this.player.damage(ENEMY_DAMAGE);
+          if(this.player.health <= 0.0) {
+            this.player.trail.disable = true;
+            for (let enemy of this.enemies) {
+              enemy.trail.disable = true;
+            }
+          }
           enemy.ded = true;
           particleBurs(this.particles, enemy.pos, PLAYER_COLOR);
         }
@@ -525,8 +538,8 @@ class Game {
   }
 
   render() {
-    //const width = this.camera.width();
-    //const height = this.camera.height();
+    const width = this.camera.width();
+    const height = this.camera.height();
 
     this.camera.clear();
     this.player.render(this.camera);
